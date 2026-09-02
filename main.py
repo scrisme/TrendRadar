@@ -13,6 +13,7 @@ from email.header import Header
 from email.utils import formataddr, formatdate, make_msgid
 from datetime import datetime
 from pathlib import Path
+import difflib
 from typing import Dict, List, Tuple, Optional, Union
 
 import pytz
@@ -1332,7 +1333,29 @@ def prepare_report_data(
 ) -> Dict:
     """准备报告数据"""
     processed_new_titles = []
+    # ===== 推送去重：相同或相近标题只保留一条 =====
+    _seen_titles: List[str] = []
 
+    def _norm_title(t: str) -> str:
+        t = clean_title(t)
+        return re.sub(r"[\s\W_]+", "", t).lower()
+
+    def _is_duplicate(title: str) -> bool:
+        key = _norm_title(title)
+        if not key or len(key) < 4:
+            return False
+        for seen in _seen_titles:
+            if key == seen:
+                return True
+            if len(key) >= 6 and difflib.SequenceMatcher(None, key, seen).ratio() > 0.92:
+                return True
+        return False
+
+    def _mark_seen(title: str) -> None:
+        key = _norm_title(title)
+        if key:
+            _seen_titles.append(key)
+    # ===== 推送去重结束 =====
     # 在增量模式下隐藏新增新闻区域
     hide_new_section = mode == "incremental"
 
@@ -1355,6 +1378,9 @@ def prepare_report_data(
                 source_titles = []
 
                 for title, title_data in titles_data.items():
+                    if _is_duplicate(title):
+                        continue
+                    _mark_seen(title)
                     url = title_data.get("url", "")
                     mobile_url = title_data.get("mobileUrl", "")
                     ranks = title_data.get("ranks", [])
@@ -1388,6 +1414,9 @@ def prepare_report_data(
 
         processed_titles = []
         for title_data in stat["titles"]:
+            if _is_duplicate(title_data["title"]):
+                continue
+            _mark_seen(title_data["title"])
             processed_title = {
                 "title": title_data["title"],
                 "source_name": title_data["source_name"],
