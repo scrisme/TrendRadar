@@ -1333,17 +1333,50 @@ def prepare_report_data(
 ) -> Dict:
     """准备报告数据"""
     processed_new_titles = []
-    # ===== 推送去重：相同或相近标题只保留一条 =====
+# ===== 推送去重：相同或相近标题只保留一条 =====
     _seen_titles: List[str] = []
+    _history_days: int = 7  # 跨天去重：保留最近 N 天的历史标题，可调整
 
     def _norm_title(t: str) -> str:
+        """标题归一化：清理空白与标点，仅保留有效字符"""
         t = clean_title(t)
         return re.sub(r"[\s\W_]+", "", t).lower()
 
+    def _load_historical_titles() -> set:
+        """加载最近 N 天（不含今天）的标题，用于跨天去重"""
+        hist = set()
+        today_folder = format_date_folder()
+        output_dir = Path("output")
+        if not output_dir.exists():
+            return hist
+        folders = sorted([d for d in output_dir.iterdir() if d.is_dir()])
+        past_folders = [d for d in folders if d.name < today_folder]
+        for folder in past_folders[-_history_days:]:
+            txt_dir = folder / "txt"
+            if not txt_dir.exists():
+                continue
+            for f in txt_dir.glob("*.txt"):
+                titles_by_id, _ = parse_file_titles(f)
+                for td in titles_by_id.values():
+                    for t in td:
+                        key = _norm_title(t)
+                        if key:
+                            hist.add(key)
+        return hist
+
+    _historical_titles = _load_historical_titles()
+    if _historical_titles:
+        print(
+            f"跨天去重：加载历史标题 {len(_historical_titles)} 条（最近 {_history_days} 天）"
+        )
+
     def _is_duplicate(title: str) -> bool:
+        """判断标题是否与历史或本次已保留的标题相同/高度相似"""
         key = _norm_title(title)
         if not key or len(key) < 4:
             return False
+        if key in _historical_titles:  # 跨天去重：历史已推过的不再推
+            return True
         for seen in _seen_titles:
             if key == seen:
                 return True
