@@ -99,3 +99,13 @@ platforms:
     name: "抖音"
   - id: "zhihu"
     name: "知乎"
+  - id: "ithome"        # ← 新增
+    name: "IT之家"
+  - id: "36kr"          # ← 新增
+    name: "36氪"
+  - solidot
+    name: "Solidot"
+  - tencent-hot
+    name: "腾讯综合热点"
+  - cankaoxiaoxi
+    name: "参考消息"
