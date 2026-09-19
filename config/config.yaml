@@ -103,9 +103,9 @@ platforms:
     name: "IT之家"
   - id: "36kr"          # ← 新增
     name: "36氪"
-  - solidot
+  - id: solidot
     name: "Solidot"
-  - tencent-hot
+  - id: tencent-hot
     name: "腾讯综合热点"
-  - cankaoxiaoxi
+  - id: cankaoxiaoxi
     name: "参考消息"
